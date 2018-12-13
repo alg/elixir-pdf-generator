@@ -106,7 +106,8 @@ defmodule PdfGenerator do
     edit_password: "g3h31m",
     shell_params: [ "--outline", "--outline-depth3", "3" ],
     delete_temporary: true,
-    filename: "my_awesome_pdf"
+    filename: "my_awesome_pdf",
+    working_dir: File.cwd!
   )
   """
   def generate( html ) do
@@ -133,8 +134,13 @@ defmodule PdfGenerator do
     # or sudo wkhtmltopdf ...
     { executable, arguments } = make_command_tuple(command_prefix, executable, arguments)
 
+
+    opts =
+      [in: "", out: :string, err: :string]
+      |> put_working_dir(options)
+
     %Result{ out: _output, status: status, err: error } = Porcelain.exec(
-      executable, arguments, [in: "", out: :string, err: :string]
+      executable, arguments, opts
     )
 
     if Keyword.get(options, :delete_temporary), do: html_file |> File.rm
@@ -165,6 +171,13 @@ defmodule PdfGenerator do
   end
   def make_command_tuple(command_prefix, wkhtml_executable, arguments) do
     { command_prefix, [wkhtml_executable] ++ arguments }
+  end
+
+  defp put_working_dir(opts, options) do
+    case Keyword.get(options, :working_dir, nil) do
+      nil -> opts
+      dir -> Keyword.put(opts, :dir, dir)
+    end
   end
 
   defp generate_filebase(nil), do: generate_filebase(PdfGenerator.Random.string())
